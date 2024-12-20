@@ -1,13 +1,36 @@
 import express from 'express'
 import sqlite3 from 'sqlite3'
+import cors from 'cors'
 
 import { fetchCats } from './api'
 
 const app = express()
+app.use(cors())
 const port = 3000
 
 app.get('/cats', (req, res) => {
-  res.send('Hello World!') // send all cats from db
+  const db = new sqlite3.Database('./backend/database/cats.db', (err) => {
+    if (err) {
+      console.error(err.message)
+      res.status(500).send('Database connection error')
+      return
+    }
+  })
+
+  db.all('SELECT * FROM cats', [], (err, rows) => {
+    if (err) {
+      console.error(err.message)
+      res.status(500).send('Error fetching cats')
+      return
+    }
+    res.json(rows)
+  })
+
+  db.close((err) => {
+    if (err) {
+      console.error(err.message)
+    }
+  })
 })
 
 app.listen(port, async () => {
@@ -28,7 +51,7 @@ app.listen(port, async () => {
 
     const stmt = db.prepare('INSERT INTO cats (id, img_url, img_width, img_height) VALUES (?, ?, ?, ?)')
     for (const cat of cats) {
-      stmt.run(cat.id, cat.width, cat.height, cat.url)
+      stmt.run(cat.id, cat.url, cat.width, cat.height)
     }
     stmt.finalize()
 
